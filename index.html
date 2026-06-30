@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transmutex Leave App</title>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<script src="https://res.cdn.office.net/teams-js/2.19.0/js/MicrosoftTeams.min.js"></script>
+<style>
+  :root {
+    --primary: #1E3A5F;
+    --accent: #2E86AB;
+    --success: #27AE60;
+    --warning: #F39C12;
+    --danger: #E74C3C;
+    --bg: #F4F6F9;
+    --card: #FFFFFF;
+    --text: #2C3E50;
+    --muted: #7F8C8D;
+    --border: #E0E4E8;
+    --radius: 10px;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* HEADER */
+  .header { background: var(--primary); height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 100; }
+  .header-logo { color: #fff; font-size: 17px; font-weight: 600; letter-spacing: 0.3px; }
+  .header-user { color: rgba(255,255,255,0.85); font-size: 13px; display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+
+  /* NAV */
+  .nav { background: #fff; border-bottom: 1px solid var(--border); display: flex; padding: 0 24px; }
+  .nav-btn { padding: 14px 20px; background: none; border: none; cursor: pointer; font-size: 14px; color: var(--muted); font-weight: 500; border-bottom: 3px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+  .nav-btn:hover { color: var(--text); }
+  .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* SCREENS */
+  .screen { display: none; padding: 24px; max-width: 1100px; margin: 0 auto; }
+  .screen.active { display: block; }
+
+  /* CARDS */
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
+  .card-title { font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card-value { font-size: 32px; font-weight: 700; color: var(--primary); }
+  .card-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+
+  /* WELCOME BANNER */
+  .banner { background: var(--accent); border-radius: var(--radius); padding: 20px 24px; color: #fff; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+  .banner h2 { font-size: 20px; font-weight: 600; }
+  .banner p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+
+  /* BALANCE CARD */
+  .balance-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; border-left: 4px solid var(--accent); }
+  .balance-type { font-size: 12px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+  .balance-days { font-size: 30px; font-weight: 700; color: var(--primary); line-height: 1; }
+  .balance-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .balance-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 12px; overflow: hidden; }
+  .balance-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+
+  /* STATUS BADGE */
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-pending  { background: #FEF3CD; color: #856404; }
+  .badge-approved { background: #D1FAE5; color: #065F46; }
+  .badge-rejected { background: #FEE2E2; color: #991B1B; }
+  .badge-cancelled{ background: #F3F4F6; color: #6B7280; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 10px 14px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 2px solid var(--border); font-weight: 600; }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #F8FAFC; }
+
+  /* FORM */
+  .form-group { margin-bottom: 18px; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+  input, select, textarea { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; color: var(--text); outline: none; transition: border 0.15s; font-family: inherit; background: #fff; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 80px; }
+
+  /* BUTTONS */
+  .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: #162d4a; }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover { background: #256e8a; }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #1e9651; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { background: #c0392b; }
+  .btn-outline { background: transparent; color: var(--primary); border: 1.5px solid var(--border); }
+  .btn-outline:hover { border-color: var(--primary); }
+  .btn-sm { padding: 6px 14px; font-size: 12px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* SECTION HEADER */
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .section-title { font-size: 16px; font-weight: 700; color: var(--primary); }
+
+  /* LOADING / ACCESS DENIED */
+  .fullscreen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--primary); }
+  .fullscreen-card { background: #fff; border-radius: 16px; padding: 48px 40px; text-align: center; max-width: 440px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .fullscreen-card h1 { font-size: 22px; color: var(--primary); margin: 16px 0 10px; }
+  .fullscreen-card p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .spinner { width: 40px; height: 40px; border: 3px solid rgba(46,134,171,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 14px; padding: 28px; max-width: 520px; width: 90%; max-height: 90vh; overflow-y: auto; }
+  .modal-title { font-size: 17px; font-weight: 700; color: var(--primary); margin-bottom: 20px; }
+
+  /* MISC */
+  .mt-16 { margin-top: 16px; }
+  .mt-20 { margin-top: 20px; }
+  .mb-16 { margin-bottom: 16px; }
+  .flex { display: flex; }
+  .gap-8 { gap: 8px; }
+  .gap-12 { gap: 12px; }
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+  .alert-info { background: #EBF5FB; color: #1A5276; border-left: 4px solid var(--accent); }
+  .alert-error { background: #FDEDEC; color: #922B21; border-left: 4px solid var(--danger); }
+  .alert-success { background: #EAFAF1; color: #1E8449; border-left: 4px solid var(--success); }
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
+  .empty-state p { font-size: 15px; margin-top: 8px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .text-muted { color: var(--muted); font-size: 13px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div id="screen-loading" class="fullscreen">
+  <div class="fullscreen-card">
+    <div class="spinner"></div>
+    <h1>Transmutex Leave</h1>
+    <p>Signing you in with your Microsoft 365 account…</p>
+  </div>
+</div>
+
+<!-- ACCESS DENIED SCREEN -->
+<div id="screen-access" class="fullscreen" style="display:none">
+  <div class="fullscreen-card">
+    <div style="font-size:48px">🔒</div>
+    <h1>Access Denied</h1>
+    <p id="access-msg">Your account is not registered in the Leave App. Please contact HR to request access.</p>
+    <a id="contact-hr-btn" href="#" style="display:inline-block;margin-top:20px" class="btn btn-accent">Contact HR</a>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+  <div class="header">
+    <div class="header-logo">Transmutex Leave</div>
+    <div class="header-user">
+      <span id="header-name"></span>
+      <div class="avatar" id="header-avatar"></div>
+    </div>
+  </div>
+  <div class="nav" id="nav-bar">
+    <button class="nav-btn active" id="nav-employee" onclick="showScreen('employee')">My Leave</button>
+    <button class="nav-btn" id="nav-manager" onclick="showScreen('manager')" style="display:none">My Team</button>
+    <button class="nav-btn" id="nav-hr" onclick="showScreen('hr')" style="display:none">HR Admin</button>
+  </div>
+
+  <!-- EMPLOYEE DASHBOARD -->
+  <div id="screen-employee" class="screen active">
+    <div class="banner">
+      <div>
+        <h2 id="welcome-msg">Welcome back!</h2>
+        <p id="welcome-date"></p>
+      </div>
+      <button class="btn btn-primary" onclick="openNewRequestModal()">+ New Leave Request</button>
+    </div>
+    <div class="section-header">
+      <span class="section-title">My Leave Balances</span>
+    </div>
+    <div class="grid-auto mb-16" id="balance-cards">
+      <div class="card"><div class="spinner" style="width:24px;height:24px;border-width:2px;margin:0"></div></div>
+    </div>
+    <div class="section-header mt-20">
+      <span class="section-title">My Requests</span>
+      <select id="filter-status-emp" onchange="loadMyRequests()" style="width:auto;padding:6px 10px;font-size:13px">
+        <option value="">All statuses</option>
+        <option value="Pending">Pending</option>
+        <option value="Approved">Approved</option>
+        <option value="Rejected">Rejected</option>
+        <option value="Cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Leave Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th><th>Submitted</th><th></th></tr></thead>
+          <tbody id="my-requests-body"><tr><td colspan="7" class="empty-state"><p>Loading…</p></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANAGER DASHBOARD -->
+  <div id="screen-manager" class="screen">
+    <div class="kpi-row" id="manager-kpis"></div>
+    <div class="section-header">
+      <span class="section-title">Pending Requests</span>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Employee</th><th>Leave Type</th><th>From</th><th>To</th><th>Days</th><th>Available Balance</th><th>Actions</th></tr></thead>
+          <tbody id="pending-requests-body"><tr><td colspan="7" class="empty-state"><p>Loading…</p></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="section-header mt-20">
+      <span class="section-title">All Team Requests</span>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Employee</th><th>Leave Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th></tr></thead>
+          <tbody id="all-team-body"><tr><td colspan="6" class="empty-state"><p>Loading…</p></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- HR DASHBOARD -->
+  <div id="screen-hr" class="screen">
+    <div class="kpi-row" id="hr-kpis"></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+      <button class="btn btn-primary" onclick="showHRTab('requests')">All Requests</button>
+      <button class="btn btn-outline" onclick="showHRTab('balances')">Balance Management</button>
+      <button class="btn btn-outline" onclick="showHRTab('users')">User Management</button>
+      <button class="btn btn-outline" onclick="showHRTab('leavetypes')">Leave Types</button>
+    </div>
+
+    <!-- HR: ALL REQUESTS -->
+    <div id="hr-tab-requests">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+        <input type="text" id="hr-search" placeholder="Search by name or email…" style="flex:1;min-width:200px" oninput="loadAllRequests()">
+        <select id="hr-filter-dept" onchange="loadAllRequests()" style="width:auto">
+          <option value="">All departments</option>
+        </select>
+        <select id="hr-filter-status" onchange="loadAllRequests()" style="width:auto">
+          <option value="">All statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Employee</th><th>Dept</th><th>Leave Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="all-requests-body"><tr><td colspan="8" class="empty-state"><p>Loading…</p></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- HR: BALANCES -->
+    <div id="hr-tab-balances" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <select id="hr-bal-employee" onchange="loadEmployeeBalances()" style="flex:1">
+          <option value="">Select an employee…</option>
+        </select>
+      </div>
+      <div id="hr-balance-table"></div>
+    </div>
+
+    <!-- HR: USERS -->
+    <div id="hr-tab-users" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <input type="text" id="hr-user-search" placeholder="Search employees…" style="flex:1;min-width:200px" oninput="loadUsers()">
+        <button class="btn btn-primary btn-sm" onclick="openAddUserModal()">+ Add Employee</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Country</th><th>Roles</th><th>Status</th><th></th></tr></thead>
+            <tbody id="users-body"><tr><td colspan="7" class="empty-state"><p>Loading…</p></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- HR: LEAVE TYPES -->
+    <div id="hr-tab-leavetypes" style="display:none">
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Leave Name</th><th>Country</th><th>Max Days/Year</th><th>Requires Approval</th><th>Paid %</th><th>Calendar Type</th></tr></thead>
+            <tbody id="leavetypes-body"><tr><td colspan="6" class="empty-state"><p>Loading…</p></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NEW LEAVE REQUEST -->
+<div class="modal-overlay" id="modal-request">
+  <div class="modal">
+    <div class="modal-title">New Leave Request</div>
+    <div id="request-alert"></div>
+    <div class="form-group">
+      <label>Leave Type</label>
+      <select id="req-leave-type" onchange="updateBalancePreview()">
+        <option value="">Select a leave type…</option>
+      </select>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Start Date</label>
+        <input type="date" id="req-start" onchange="calcDuration()">
+      </div>
+      <div class="form-group">
+        <label>End Date</label>
+        <input type="date" id="req-end" onchange="calcDuration()">
+      </div>
+    </div>
+    <div id="req-duration-info" class="alert alert-info" style="display:none"></div>
+    <div id="req-balance-info" class="alert alert-info" style="display:none"></div>
+    <div class="form-group">
+      <label>Notes (optional)</label>
+      <textarea id="req-notes" placeholder="Any additional information…"></textarea>
+    </div>
+    <div class="flex gap-8 mt-16">
+      <button class="btn btn-primary" onclick="submitLeaveRequest()" id="req-submit-btn">Submit Request</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-request')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: APPROVE / REJECT -->
+<div class="modal-overlay" id="modal-decision">
+  <div class="modal">
+    <div class="modal-title" id="decision-title">Review Request</div>
+    <div id="decision-info" class="mb-16"></div>
+    <div class="form-group">
+      <label>Comment <span style="color:var(--danger)">*</span></label>
+      <textarea id="decision-comment" placeholder="Required — provide a reason for your decision…"></textarea>
+    </div>
+    <div class="flex gap-8 mt-16">
+      <button class="btn btn-success" onclick="submitDecision('Approved')">✓ Approve</button>
+      <button class="btn btn-danger" onclick="submitDecision('Rejected')">✗ Reject</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-decision')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADJUST BALANCE -->
+<div class="modal-overlay" id="modal-balance">
+  <div class="modal">
+    <div class="modal-title">Adjust Leave Balance</div>
+    <div id="bal-current-info" class="alert alert-info mb-16"></div>
+    <input type="hidden" id="bal-record-id">
+    <input type="hidden" id="bal-employee-id">
+    <input type="hidden" id="bal-leave-type">
+    <input type="hidden" id="bal-current-val">
+    <div class="form-group">
+      <label>Adjustment (positive = add days, negative = deduct days)</label>
+      <input type="number" id="bal-adjustment" placeholder="e.g. 2 or -1" oninput="previewBalanceAdjustment()">
+    </div>
+    <div id="bal-preview" class="alert alert-info" style="display:none"></div>
+    <div class="form-group">
+      <label>Reason <span style="color:var(--danger)">*</span></label>
+      <textarea id="bal-reason" placeholder="Required — document why this adjustment is being made…"></textarea>
+    </div>
+    <div class="flex gap-8 mt-16">
+      <button class="btn btn-primary" onclick="saveBalanceAdjustment()">Save Adjustment</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-balance')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// CONFIG — your specific values
+// ─────────────────────────────────────────────────────────────────────────────
+const CONFIG = {
+  clientId:  'b9b714d6-c484-4f56-9bda-590649b5ec12',
+  tenantId:  'transmutex.onmicrosoft.com',
+  siteId:    'b12156f9-2859-4753-901f-2bba38c73721',
+  siteUrl:   'https://transmutex.sharepoint.com/sites/hradmin',
+  hrEmail:   'hradmin@transmutex.com',     // ← UPDATE THIS
+  lists: {
+    employees:       'Employees',
+    leaveTypes:      'LeaveTypes',
+    leaveRequests:   'LeaveRequests',
+    leaveBalances:   'LeaveBalances',
+    leaveEligibility:'LeaveEligibility',
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MSAL SETUP
+// ─────────────────────────────────────────────────────────────────────────────
+const msalConfig = {
+  auth: {
+    clientId: CONFIG.clientId,
+    authority: `https://login.microsoftonline.com/${CONFIG.tenantId}`,
+    redirectUri: window.location.href.split('?')[0].split('#')[0],
+  },
+  cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: true }
+};
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+const SCOPES = ['User.Read', 'Sites.ReadWrite.All', 'Mail.Send', 'Calendars.ReadWrite'];
+
+let currentUser = null;   // SharePoint employee record
+let msalAccount = null;   // MSAL account
+let accessToken = null;
+let isHR = false, isManager = false, isEmployee = false;
+let currentRequestForDecision = null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────────────────────────────────────
+async function getToken() {
+  try {
+    const res = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: msalAccount });
+    return res.accessToken;
+  } catch {
+    const res = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
+    msalAccount = res.account;
+    return res.accessToken;
+  }
+}
+
+async function init() {
+  await msalInstance.initialize();
+
+  // Detect if we're running inside Microsoft Teams
+  const inTeams = await detectTeams();
+
+  // Step 1: If we are returning from a Microsoft redirect login, capture the result
+  let redirectResult = null;
+  try {
+    redirectResult = await msalInstance.handleRedirectPromise();
+  } catch (e) {
+    showAccessDenied('Login error after redirect: ' + e.message);
+    return;
+  }
+  if (redirectResult) {
+    msalAccount = redirectResult.account;
+  }
+
+  // Step 2: Check if there is already a signed-in account in the cache
+  if (!msalAccount) {
+    const accounts = msalInstance.getAllAccounts();
+    if (accounts.length > 0) msalAccount = accounts[0];
+  }
+
+  // Step 3: If still not signed in, trigger login
+  if (!msalAccount) {
+    try {
+      if (inTeams) {
+        // Inside Teams, use the Teams SDK's own auth popup — this is the
+        // Microsoft-supported way to sign in from inside a Teams tab.
+        await loginViaTeams();
+        return;
+      } else {
+        // Outside Teams (plain browser), use standard MSAL redirect.
+        await msalInstance.loginRedirect({ scopes: SCOPES });
+        return;
+      }
+    } catch (e) {
+      showAccessDenied('Login was cancelled or blocked. Please reload and try again. (' + e.message + ')');
+      return;
+    }
+  }
+
+  accessToken = await getToken();
+  await loadCurrentUser();
+}
+
+// Checks whether the app is running inside Microsoft Teams.
+// Returns true/false; also calls microsoftTeams.app.initialize() if so.
+function detectTeams() {
+  return new Promise((resolve) => {
+    if (typeof microsoftTeams === 'undefined') {
+      resolve(false);
+      return;
+    }
+    // Give the Teams SDK a brief moment to detect its host context.
+    const timeout = setTimeout(() => resolve(false), 1000);
+    microsoftTeams.app.initialize().then(() => {
+      clearTimeout(timeout);
+      resolve(true);
+    }).catch(() => {
+      clearTimeout(timeout);
+      resolve(false);
+    });
+  });
+}
+
+// Signs in using Teams' own authentication popup (auth-start/auth-end pages),
+// which is the supported pattern for tabs running inside the Teams app shell.
+function loginViaTeams() {
+  return new Promise((resolve, reject) => {
+    microsoftTeams.authentication.authenticate({
+      url: window.location.origin + '/auth-start.html',
+      width: 600,
+      height: 535
+    }).then((result) => {
+      // auth-end.html will have stored the account; re-check MSAL cache
+      const accounts = msalInstance.getAllAccounts();
+      if (accounts.length > 0) {
+        msalAccount = accounts[0];
+        getToken().then((token) => {
+          accessToken = token;
+          loadCurrentUser().then(resolve).catch(reject);
+        }).catch(reject);
+      } else {
+        reject(new Error('Sign-in completed but no account was found.'));
+      }
+    }).catch(reject);
+  });
+}
+
+async function loadCurrentUser() {
+  const email = msalAccount.username.toLowerCase();
+  const data = await spGet(`${CONFIG.lists.employees}?$filter=EmployeeEmail eq '${email}' and IsActive eq 1&$top=1`);
+  if (!data.value || data.value.length === 0) {
+    showAccessDenied(`Your account (${email}) is not registered in the Leave App. Contact HR to request access.`);
+    return;
+  }
+  currentUser = data.value[0];
+  const roles = currentUser.Roles ? currentUser.Roles.split(';').map(r => r.trim()) : [];
+  isHR       = roles.some(r => r.toLowerCase() === 'hr');
+  isManager  = roles.some(r => r.toLowerCase() === 'manager');
+  isEmployee = roles.some(r => r.toLowerCase() === 'employee') || (!isHR && !isManager);
+  bootApp();
+}
+
+function showAccessDenied(msg) {
+  document.getElementById('screen-loading').style.display = 'none';
+  document.getElementById('screen-access').style.display  = 'flex';
+  document.getElementById('access-msg').textContent = msg;
+  document.getElementById('contact-hr-btn').href =
+    `mailto:${CONFIG.hrEmail}?subject=Leave App Access Request&body=Please activate my account: ${msalAccount?.username}`;
+}
+
+function bootApp() {
+  document.getElementById('screen-loading').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  const name = `${currentUser.FirstName || ''} ${currentUser.LastName || ''}`.trim() || currentUser.EmployeeName || 'User';
+  document.getElementById('header-name').textContent = name;
+  document.getElementById('header-avatar').textContent = name.charAt(0).toUpperCase();
+  document.getElementById('welcome-msg').textContent = `Welcome back, ${currentUser.FirstName || name}!`;
+  document.getElementById('welcome-date').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  if (isManager) document.getElementById('nav-manager').style.display = 'inline-block';
+  if (isHR)      document.getElementById('nav-hr').style.display      = 'inline-block';
+  if (isHR) showScreen('hr');
+  else if (isManager) showScreen('manager');
+  else showScreen('employee');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHAREPOINT GRAPH API HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+const BASE = `https://graph.microsoft.com/v1.0/sites/${CONFIG.siteId}/lists`;
+
+async function spGet(listAndQuery) {
+  accessToken = await getToken();
+  const r = await fetch(`${BASE}/${listAndQuery}`, {
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
+  });
+  if (!r.ok) throw new Error(`GET failed: ${r.status} ${await r.text()}`);
+  return r.json();
+}
+
+async function spGetItems(listName, query = '') {
+  const res = await spGet(`${listName}/items?expand=fields${query ? '&' + query : ''}&$top=999`);
+  return res.value.map(v => ({ id: v.id, ...v.fields }));
+}
+
+async function spPost(listName, fields) {
+  accessToken = await getToken();
+  const r = await fetch(`${BASE}/${listName}/items`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields })
+  });
+  if (!r.ok) throw new Error(`POST failed: ${r.status} ${await r.text()}`);
+  return r.json();
+}
+
+async function spPatch(listName, itemId, fields) {
+  accessToken = await getToken();
+  const r = await fetch(`${BASE}/${listName}/items/${itemId}/fields`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields)
+  });
+  if (!r.ok) throw new Error(`PATCH failed: ${r.status} ${await r.text()}`);
+  return r.json();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEND EMAIL VIA GRAPH
+// ─────────────────────────────────────────────────────────────────────────────
+async function sendEmail(to, subject, bodyHtml) {
+  accessToken = await getToken();
+  await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: {
+        subject,
+        body: { contentType: 'HTML', content: bodyHtml },
+        toRecipients: [{ emailAddress: { address: to } }]
+      }
+    })
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CALENDAR EVENTS VIA GRAPH
+// ─────────────────────────────────────────────────────────────────────────────
+async function createCalendarEvent(employeeEmail, subject, startDate, endDate, showAs) {
+  accessToken = await getToken();
+  const endPlusOne = new Date(endDate);
+  endPlusOne.setDate(endPlusOne.getDate() + 1);
+  const r = await fetch(`https://graph.microsoft.com/v1.0/users/${employeeEmail}/calendar/events`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      subject,
+      start: { dateTime: startDate + 'T00:00:00', timeZone: 'UTC' },
+      end:   { dateTime: endPlusOne.toISOString().split('T')[0] + 'T00:00:00', timeZone: 'UTC' },
+      isAllDay: true,
+      showAs,
+      body: { contentType: 'Text', content: 'Approved leave. For urgent matters contact your manager.' }
+    })
+  });
+  if (!r.ok) return null;
+  const data = await r.json();
+  return data.id;
+}
+
+async function deleteCalendarEvent(employeeEmail, eventId) {
+  if (!eventId) return;
+  accessToken = await getToken();
+  await fetch(`https://graph.microsoft.com/v1.0/users/${employeeEmail}/calendar/events/${eventId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+function calcWorkingDays(start, end) {
+  const s = new Date(start), e = new Date(end);
+  const days = (e - s) / 86400000 + 1;
+  return Math.max(1, Math.round(days * 5 / 7));
+}
+function badge(status) {
+  const cls = { Pending:'badge-pending', Approved:'badge-approved', Rejected:'badge-rejected', Cancelled:'badge-cancelled' };
+  return `<span class="badge ${cls[status] || 'badge-cancelled'}">${status}</span>`;
+}
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+  const navBtn = document.getElementById(`nav-${name}`);
+  if (navBtn) navBtn.classList.add('active');
+  if (name === 'employee') { loadBalances(); loadMyRequests(); }
+  if (name === 'manager')  { loadManagerDashboard(); }
+  if (name === 'hr')       { loadHRDashboard(); }
+}
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EMPLOYEE: BALANCES
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadBalances() {
+  const container = document.getElementById('balance-cards');
+  try {
+    const items = await spGetItems(CONFIG.lists.leaveBalances,
+      `$filter=fields/EmployeeID eq '${currentUser.EmployeeEmail}' and fields/IsActive eq true`);
+    if (items.length === 0) {
+      container.innerHTML = '<p class="text-muted">No leave balances found. Contact HR.</p>';
+      return;
+    }
+    container.innerHTML = items.map(b => {
+      const avail = (b.OpeningBalance||0) + (b.LeaveAccrued||0) - (b.LeaveTaken||0) + (b.LeaveAdjusted||0);
+      const total = (b.OpeningBalance||0) + (b.LeaveAccrued||0);
+      const pct   = total > 0 ? Math.min(100, Math.round(avail / total * 100)) : 0;
+      const barColor = avail > 5 ? 'var(--success)' : avail > 2 ? 'var(--warning)' : 'var(--danger)';
+      return `<div class="balance-card">
+        <div class="balance-type">${b.LeaveType||'Leave'}</div>
+        <div class="balance-days">${avail}</div>
+        <div class="balance-label">days available of ${total}</div>
+        <div class="balance-bar"><div class="balance-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    container.innerHTML = `<div class="alert alert-error">Failed to load balances: ${e.message}</div>`;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EMPLOYEE: MY REQUESTS
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadMyRequests() {
+  const tbody = document.getElementById('my-requests-body');
+  const statusFilter = document.getElementById('filter-status-emp').value;
+  tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><p>Loading…</p></td></tr>';
+  try {
+    let query = `$filter=fields/EmployeeID eq '${currentUser.EmployeeEmail}'&$orderby=fields/SubmittedDate desc`;
+    const items = await spGetItems(CONFIG.lists.leaveRequests, query);
+    const filtered = statusFilter ? items.filter(r => r.Status === statusFilter) : items;
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><p>No requests found.</p></td></tr>';
+      return;
+    }
+    tbody.innerHTML = filtered.map(r => `
+      <tr>
+        <td><strong>${r.LeaveType||'—'}</strong></td>
+        <td>${fmtDate(r.StartDate)}</td>
+        <td>${fmtDate(r.EndDate)}</td>
+        <td>${r.TotalDays||'—'}</td>
+        <td>${badge(r.Status)}</td>
+        <td>${fmtDate(r.SubmittedDate)}</td>
+        <td>${r.Status === 'Pending'
+          ? `<button class="btn btn-outline btn-sm" onclick="cancelRequest('${r.id}')">Cancel</button>`
+          : ''}</td>
+      </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="alert alert-error">${e.message}</div></td></tr>`;
+  }
+}
+
+async function cancelRequest(itemId) {
+  if (!confirm('Cancel this leave request?')) return;
+  try {
+    const items = await spGetItems(CONFIG.lists.leaveRequests, `$filter=fields/id eq '${itemId}'&$top=1`);
+    const req = items.find(r => r.id === itemId) || (await spGetItems(CONFIG.lists.leaveRequests, `$select=id,fields/CalendarEventID,fields/EmployeeEmail&$top=1&$filter=fields/id eq '${itemId}'`))[0];
+    await spPatch(CONFIG.lists.leaveRequests, itemId, { Status: 'Cancelled' });
+    loadMyRequests();
+    loadBalances();
+    showToast('Request cancelled.');
+  } catch(e) { showToast(`Error: ${e.message}`, 'error'); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NEW LEAVE REQUEST MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+async function openNewRequestModal() {
+  document.getElementById('request-alert').innerHTML = '';
+  document.getElementById('req-leave-type').innerHTML = '<option value="">Loading…</option>';
+  document.getElementById('req-start').value = '';
+  document.getElementById('req-end').value = '';
+  document.getElementById('req-notes').value = '';
+  document.getElementById('req-duration-info').style.display = 'none';
+  document.getElementById('req-balance-info').style.display  = 'none';
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('req-start').min = today;
+  document.getElementById('req-end').min   = today;
+  openModal('modal-request');
+  try {
+    const types = await spGetItems(CONFIG.lists.leaveTypes,
+      `$filter=fields/Country eq '${currentUser.CountryOrRegion}'`);
+    const elig = await spGetItems(CONFIG.lists.leaveEligibility,
+      `$filter=fields/EmployeeID eq '${currentUser.EmployeeEmail}'`);
+    const ineligible = elig.filter(e => e.IsEligible === false).map(e => e.LeaveType);
+    const eligible = types.filter(t => !ineligible.includes(t.LeaveName));
+    document.getElementById('req-leave-type').innerHTML =
+      '<option value="">Select a leave type…</option>' +
+      eligible.map(t => `<option value="${t.LeaveName}">${t.LeaveName}</option>`).join('');
+  } catch(e) {
+    document.getElementById('req-leave-type').innerHTML = '<option value="">Error loading types</option>';
+  }
+}
+
+function calcDuration() {
+  const s = document.getElementById('req-start').value;
+  const e = document.getElementById('req-end').value;
+  const info = document.getElementById('req-duration-info');
+  if (s && e) {
+    if (new Date(e) < new Date(s)) {
+      info.className = 'alert alert-error';
+      info.textContent = 'End date must be after start date.';
+      info.style.display = 'block';
+      return;
+    }
+    const days = calcWorkingDays(s, e);
+    info.className = 'alert alert-info';
+    info.textContent = `Duration: approximately ${days} working day${days !== 1 ? 's' : ''}.`;
+    info.style.display = 'block';
+    updateBalancePreview();
+  }
+}
+
+async function updateBalancePreview() {
+  const type = document.getElementById('req-leave-type').value;
+  const s = document.getElementById('req-start').value;
+  const e = document.getElementById('req-end').value;
+  const info = document.getElementById('req-balance-info');
+  if (!type) { info.style.display = 'none'; return; }
+  try {
+    const bals = await spGetItems(CONFIG.lists.leaveBalances,
+      `$filter=fields/EmployeeID eq '${currentUser.EmployeeEmail}' and fields/LeaveType eq '${type}'`);
+    const b = bals[0];
+    if (!b) { info.style.display = 'none'; return; }
+    const avail = (b.OpeningBalance||0) + (b.LeaveAccrued||0) - (b.LeaveTaken||0) + (b.LeaveAdjusted||0);
+    const days  = (s && e) ? calcWorkingDays(s, e) : 0;
+    const after = avail - days;
+    info.className = after >= 0 ? 'alert alert-info' : 'alert alert-error';
+    info.innerHTML = `Current balance: <strong>${avail} days</strong>${days ? ` → After request: <strong>${after} days</strong>` : ''}`;
+    info.style.display = 'block';
+  } catch { info.style.display = 'none'; }
+}
+
+async function submitLeaveRequest() {
+  const type  = document.getElementById('req-leave-type').value;
+  const start = document.getElementById('req-start').value;
+  const end   = document.getElementById('req-end').value;
+  const notes = document.getElementById('req-notes').value;
+  const alertEl = document.getElementById('request-alert');
+  alertEl.innerHTML = '';
+  if (!type)  { alertEl.innerHTML = '<div class="alert alert-error">Please select a leave type.</div>'; return; }
+  if (!start) { alertEl.innerHTML = '<div class="alert alert-error">Please select a start date.</div>'; return; }
+  if (!end)   { alertEl.innerHTML = '<div class="alert alert-error">Please select an end date.</div>'; return; }
+  if (new Date(end) < new Date(start)) { alertEl.innerHTML = '<div class="alert alert-error">End date must be after start date.</div>'; return; }
+  const days = calcWorkingDays(start, end);
+  // Check balance
+  try {
+    const bals = await spGetItems(CONFIG.lists.leaveBalances,
+      `$filter=fields/EmployeeID eq '${currentUser.EmployeeEmail}' and fields/LeaveType eq '${type}'`);
+    const b = bals[0];
+    if (b) {
+      const avail = (b.OpeningBalance||0) + (b.LeaveAccrued||0) - (b.LeaveTaken||0) + (b.LeaveAdjusted||0);
+      if (days > avail) {
+        alertEl.innerHTML = `<div class="alert alert-error">Insufficient balance. You have ${avail} days available but requested ${days}.</div>`;
+        return;
+      }
+    }
+    // Check overlaps
+    const existing = await spGetItems(CONFIG.lists.leaveRequests,
+      `$filter=fields/EmployeeID eq '${currentUser.EmployeeEmail}' and fields/Status eq 'Approved'`);
+    const overlap = existing.some(r => new Date(r.StartDate) <= new Date(end) && new Date(r.EndDate) >= new Date(start));
+    if (overlap) {
+      alertEl.innerHTML = '<div class="alert alert-error">You already have approved leave overlapping these dates.</div>';
+      return;
+    }
+    const btn = document.getElementById('req-submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+    const requestId = 'REQ-' + Date.now();
+    const name = currentUser.EmployeeName || `${currentUser.FirstName} ${currentUser.LastName}`.trim();
+    await spPost(CONFIG.lists.leaveRequests, {
+      Title:           requestId,
+      EmployeeID:      currentUser.EmployeeEmail,
+      EmployeeName:    name,
+      EmployeeEmail:   currentUser.EmployeeEmail,
+      EmployeeCountry: currentUser.CountryOrRegion || '',
+      Department:      currentUser.Department || '',
+      ManagerID:       currentUser.LineManagerEmail || '',
+      LeaveType:       type,
+      StartDate:       start,
+      EndDate:         end,
+      TotalDays:       days,
+      Status:          'Pending',
+      SubmittedDate:   new Date().toISOString(),
+    });
+    // Email manager
+    if (currentUser.LineManagerEmail) {
+      const empName = name;
+      await sendEmail(currentUser.LineManagerEmail,
+        `Leave Request Pending Approval — ${empName}`,
+        `<p>Hi,</p><p><strong>${empName}</strong> has submitted a leave request requiring your approval:</p>
+         <ul><li><strong>Type:</strong> ${type}</li><li><strong>Dates:</strong> ${fmtDate(start)} → ${fmtDate(end)}</li>
+         <li><strong>Duration:</strong> ${days} working day${days!==1?'s':''}</li></ul>
+         <p>Please open the Leave App to approve or reject this request.</p>
+         <p style="color:#7F8C8D;font-size:12px">Transmutex Leave Management App</p>`
+      ).catch(() => {});
+    }
+    closeModal('modal-request');
+    showToast('Leave request submitted successfully!');
+    loadMyRequests();
+    loadBalances();
+    btn.disabled = false;
+    btn.textContent = 'Submit Request';
+  } catch(e) {
+    alertEl.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+    document.getElementById('req-submit-btn').disabled = false;
+    document.getElementById('req-submit-btn').textContent = 'Submit Request';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MANAGER DASHBOARD
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadManagerDashboard() {
+  try {
+    const all = await spGetItems(CONFIG.lists.leaveRequests,
+      `$filter=fields/ManagerID eq '${currentUser.EmployeeEmail}'`);
+    const pending   = all.filter(r => r.Status === 'Pending');
+    const approvedM = all.filter(r => r.Status === 'Approved' && new Date(r.StartDate).getMonth() === new Date().getMonth());
+    document.getElementById('manager-kpis').innerHTML = `
+      <div class="card"><div class="card-title">Pending Approval</div><div class="card-value">${pending.length}</div></div>
+      <div class="card"><div class="card-title">Approved This Month</div><div class="card-value">${approvedM.length}</div></div>
+      <div class="card"><div class="card-title">Total Team Requests</div><div class="card-value">${all.length}</div></div>`;
+    // Pending table
+    const ptbody = document.getElementById('pending-requests-body');
+    if (pending.length === 0) {
+      ptbody.innerHTML = '<tr><td colspan="7" class="empty-state"><p>No pending requests.</p></td></tr>';
+    } else {
+      const bals = await spGetItems(CONFIG.lists.leaveBalances,
+        `$filter=fields/ManagerID eq '${currentUser.EmployeeEmail}' and fields/IsActive eq true`);
+      ptbody.innerHTML = pending.map(r => {
+        const b = bals.find(b => b.EmployeeID === r.EmployeeID && b.LeaveType === r.LeaveType);
+        const avail = b ? (b.OpeningBalance||0)+(b.LeaveAccrued||0)-(b.LeaveTaken||0)+(b.LeaveAdjusted||0) : '—';
+        return `<tr>
+          <td><strong>${r.EmployeeName||r.EmployeeID}</strong><br><span class="text-muted">${r.Department||''}</span></td>
+          <td>${r.LeaveType||'—'}</td>
+          <td>${fmtDate(r.StartDate)}</td>
+          <td>${fmtDate(r.EndDate)}</td>
+          <td>${r.TotalDays||'—'}</td>
+          <td>${avail} days</td>
+          <td><button class="btn btn-accent btn-sm" onclick="openDecisionModal(${JSON.stringify(r).replace(/"/g,'&quot;')})">Review</button></td>
+        </tr>`;
+      }).join('');
+    }
+    // All requests table
+    const atbody = document.getElementById('all-team-body');
+    atbody.innerHTML = all.length === 0
+      ? '<tr><td colspan="6" class="empty-state"><p>No requests found.</p></td></tr>'
+      : all.map(r => `<tr>
+          <td>${r.EmployeeName||r.EmployeeID}</td>
+          <td>${r.LeaveType||'—'}</td>
+          <td>${fmtDate(r.StartDate)}</td>
+          <td>${fmtDate(r.EndDate)}</td>
+          <td>${r.TotalDays||'—'}</td>
+          <td>${badge(r.Status)}</td>
+        </tr>`).join('');
+  } catch(e) {
+    document.getElementById('pending-requests-body').innerHTML =
+      `<tr><td colspan="7"><div class="alert alert-error">${e.message}</div></td></tr>`;
+  }
+}
+
+function openDecisionModal(req) {
+  currentRequestForDecision = req;
+  document.getElementById('decision-title').textContent = `Review: ${req.EmployeeName} — ${req.LeaveType}`;
+  document.getElementById('decision-info').innerHTML = `
+    <div class="alert alert-info">
+      <strong>${req.EmployeeName}</strong> requested <strong>${req.LeaveType}</strong><br>
+      ${fmtDate(req.StartDate)} → ${fmtDate(req.EndDate)} (${req.TotalDays} working day${req.TotalDays!==1?'s':''})
+    </div>`;
+  document.getElementById('decision-comment').value = '';
+  openModal('modal-decision');
+}
+
+async function submitDecision(decision) {
+  const comment = document.getElementById('decision-comment').value.trim();
+  if (!comment) { alert('A comment is required before ' + (decision === 'Approved' ? 'approving.' : 'rejecting.')); return; }
+  const req = currentRequestForDecision;
+  try {
+    await spPatch(CONFIG.lists.leaveRequests, req.id, { Status: decision, ManagerComment: comment });
+    if (decision === 'Approved') {
+      // Update leave balance
+      const bals = await spGetItems(CONFIG.lists.leaveBalances,
+        `$filter=fields/EmployeeID eq '${req.EmployeeID}' and fields/LeaveType eq '${req.LeaveType}'`);
+      const b = bals[0];
+      if (b) {
+        const newTaken   = (b.LeaveTaken||0) + (req.TotalDays||0);
+        const newClosing = (b.OpeningBalance||0) + (b.LeaveAccrued||0) - newTaken + (b.LeaveAdjusted||0);
+        await spPatch(CONFIG.lists.leaveBalances, b.id, {
+          LeaveTaken:       newTaken,
+          ClosingBalance:   newClosing,
+          LastUpdatedDate:  new Date().toISOString(),
+          LastUpdatedBy:    currentUser.EmployeeEmail
+        });
+      }
+      // Create calendar event
+      const types = await spGetItems(CONFIG.lists.leaveTypes,
+        `$filter=fields/LeaveName eq '${req.LeaveType}'`);
+      const lt = types[0];
+      const calType = lt?.CalendarEventType || 'OutOfOffice';
+      if (calType !== 'None' && req.EmployeeEmail) {
+        const showAs = calType === 'WorkingElsewhere' ? 'workingElsewhere' : 'oof';
+        const evtId = await createCalendarEvent(req.EmployeeEmail, `${req.LeaveType}`, req.StartDate, req.EndDate, showAs)
+          .catch(() => null);
+        if (evtId) await spPatch(CONFIG.lists.leaveRequests, req.id, { CalendarEventID: evtId }).catch(() => {});
+      }
+    }
+    // Email employee
+    if (req.EmployeeEmail) {
+      const subj = decision === 'Approved'
+        ? `Your leave request has been approved — ${req.LeaveType}`
+        : `Your leave request has been rejected — ${req.LeaveType}`;
+      const color = decision === 'Approved' ? '#27AE60' : '#E74C3C';
+      await sendEmail(req.EmployeeEmail, subj,
+        `<p>Hi ${req.EmployeeName},</p>
+         <p>Your leave request has been <strong style="color:${color}">${decision.toLowerCase()}</strong>.</p>
+         <ul><li><strong>Type:</strong> ${req.LeaveType}</li>
+         <li><strong>Dates:</strong> ${fmtDate(req.StartDate)} → ${fmtDate(req.EndDate)}</li>
+         <li><strong>Duration:</strong> ${req.TotalDays} working day${req.TotalDays!==1?'s':''}</li>
+         <li><strong>Manager comment:</strong> ${comment}</li></ul>
+         <p style="color:#7F8C8D;font-size:12px">Transmutex Leave Management App</p>`
+      ).catch(() => {});
+    }
+    closeModal('modal-decision');
+    showToast(`Request ${decision.toLowerCase()} successfully.`);
+    loadManagerDashboard();
+  } catch(e) { showToast(`Error: ${e.message}`, 'error'); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HR DASHBOARD
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadHRDashboard() {
+  try {
+    const [allReqs, allEmps] = await Promise.all([
+      spGetItems(CONFIG.lists.leaveRequests),
+      spGetItems(CONFIG.lists.employees, `$filter=fields/IsActive eq true`)
+    ]);
+    const pending = allReqs.filter(r => r.Status === 'Pending').length;
+    const approvedM = allReqs.filter(r => r.Status === 'Approved' && new Date(r.StartDate).getMonth() === new Date().getMonth()).length;
+    const onLeaveToday = allReqs.filter(r => r.Status==='Approved' && new Date(r.StartDate)<=new Date() && new Date(r.EndDate)>=new Date()).length;
+    document.getElementById('hr-kpis').innerHTML = `
+      <div class="card"><div class="card-title">Pending Approval</div><div class="card-value">${pending}</div></div>
+      <div class="card"><div class="card-title">Approved This Month</div><div class="card-value">${approvedM}</div></div>
+      <div class="card"><div class="card-title">On Leave Today</div><div class="card-value">${onLeaveToday}</div></div>
+      <div class="card"><div class="card-title">Active Employees</div><div class="card-value">${allEmps.length}</div></div>`;
+    // Populate dept filter
+    const depts = [...new Set(allEmps.map(e => e.Department).filter(Boolean))].sort();
+    document.getElementById('hr-filter-dept').innerHTML =
+      '<option value="">All departments</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
+    // Populate employee selects
+    const empSelect = document.getElementById('hr-bal-employee');
+    empSelect.innerHTML = '<option value="">Select an employee…</option>' +
+      allEmps.sort((a,b) => (a.EmployeeName||'').localeCompare(b.EmployeeName||''))
+        .map(e => `<option value="${e.EmployeeEmail}">${e.EmployeeName||e.EmployeeEmail}</option>`).join('');
+    loadAllRequests();
+    loadUsers();
+    loadLeaveTypes();
+  } catch(e) { console.error(e); }
+}
+
+function showHRTab(tab) {
+  ['requests','balances','users','leavetypes'].forEach(t => {
+    document.getElementById(`hr-tab-${t}`).style.display = t === tab ? 'block' : 'none';
+  });
+}
+
+async function loadAllRequests() {
+  const tbody = document.getElementById('all-requests-body');
+  const search = (document.getElementById('hr-search')?.value || '').toLowerCase();
+  const dept   = document.getElementById('hr-filter-dept')?.value || '';
+  const status = document.getElementById('hr-filter-status')?.value || '';
+  tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><p>Loading…</p></td></tr>';
+  try {
+    let items = await spGetItems(CONFIG.lists.leaveRequests, `$orderby=fields/SubmittedDate desc`);
+    if (search) items = items.filter(r => (r.EmployeeName||'').toLowerCase().includes(search) || (r.EmployeeEmail||'').toLowerCase().includes(search));
+    if (dept)   items = items.filter(r => r.Department === dept);
+    if (status) items = items.filter(r => r.Status === status);
+    if (items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><p>No requests found.</p></td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(r => `<tr>
+      <td><strong>${r.EmployeeName||r.EmployeeID}</strong><br><span class="text-muted">${r.EmployeeEmail||''}</span></td>
+      <td>${r.Department||'—'}</td>
+      <td>${r.LeaveType||'—'}</td>
+      <td>${fmtDate(r.StartDate)}</td>
+      <td>${fmtDate(r.EndDate)}</td>
+      <td>${r.TotalDays||'—'}</td>
+      <td>${badge(r.Status)}</td>
+      <td>${r.Status === 'Pending'
+        ? `<button class="btn btn-accent btn-sm" onclick="openDecisionModal(${JSON.stringify(r).replace(/"/g,'&quot;')})">Review</button>`
+        : ''}</td>
+    </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="alert alert-error">${e.message}</div></td></tr>`;
+  }
+}
+
+async function loadEmployeeBalances() {
+  const email = document.getElementById('hr-bal-employee').value;
+  const container = document.getElementById('hr-balance-table');
+  if (!email) { container.innerHTML = ''; return; }
+  container.innerHTML = '<div class="alert alert-info">Loading…</div>';
+  try {
+    const items = await spGetItems(CONFIG.lists.leaveBalances,
+      `$filter=fields/EmployeeID eq '${email}'`);
+    if (items.length === 0) {
+      container.innerHTML = '<div class="alert alert-info">No balances found for this employee.</div>';
+      return;
+    }
+    container.innerHTML = `<div class="card"><div class="table-wrap"><table>
+      <thead><tr><th>Leave Type</th><th>Opening</th><th>Accrued</th><th>Taken</th><th>Adjusted</th><th>Available</th><th>Active</th><th></th></tr></thead>
+      <tbody>${items.map(b => {
+        const avail = (b.OpeningBalance||0)+(b.LeaveAccrued||0)-(b.LeaveTaken||0)+(b.LeaveAdjusted||0);
+        return `<tr>
+          <td><strong>${b.LeaveType||'—'}</strong></td>
+          <td>${b.OpeningBalance||0}</td>
+          <td>${b.LeaveAccrued||0}</td>
+          <td>${b.LeaveTaken||0}</td>
+          <td>${b.LeaveAdjusted||0}</td>
+          <td><strong>${avail}</strong></td>
+          <td>${b.IsActive ? '<span class="badge badge-approved">Active</span>' : '<span class="badge badge-cancelled">Inactive</span>'}</td>
+          <td><button class="btn btn-outline btn-sm" onclick="openBalanceModal(${JSON.stringify(b).replace(/"/g,'&quot;')}, ${avail})">Adjust</button></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div></div>`;
+  } catch(e) {
+    container.innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+  }
+}
+
+function openBalanceModal(b, currentAvail) {
+  document.getElementById('bal-record-id').value    = b.id;
+  document.getElementById('bal-employee-id').value  = b.EmployeeID;
+  document.getElementById('bal-leave-type').value   = b.LeaveType;
+  document.getElementById('bal-current-val').value  = currentAvail;
+  document.getElementById('bal-adjustment').value   = '';
+  document.getElementById('bal-reason').value       = '';
+  document.getElementById('bal-preview').style.display = 'none';
+  document.getElementById('bal-current-info').textContent =
+    `${b.LeaveType} — current available balance: ${currentAvail} days`;
+  openModal('modal-balance');
+}
+
+function previewBalanceAdjustment() {
+  const adj     = parseFloat(document.getElementById('bal-adjustment').value) || 0;
+  const current = parseFloat(document.getElementById('bal-current-val').value) || 0;
+  const preview = document.getElementById('bal-preview');
+  const after   = current + adj;
+  preview.className = after >= 0 ? 'alert alert-info' : 'alert alert-error';
+  preview.innerHTML = `After adjustment: <strong>${after} days</strong> (${adj >= 0 ? '+' : ''}${adj} days)`;
+  preview.style.display = 'block';
+}
+
+async function saveBalanceAdjustment() {
+  const itemId  = document.getElementById('bal-record-id').value;
+  const empId   = document.getElementById('bal-employee-id').value;
+  const type    = document.getElementById('bal-leave-type').value;
+  const adj     = parseFloat(document.getElementById('bal-adjustment').value);
+  const reason  = document.getElementById('bal-reason').value.trim();
+  const current = parseFloat(document.getElementById('bal-current-val').value);
+  if (isNaN(adj)) { alert('Please enter a valid adjustment number.'); return; }
+  if (!reason)    { alert('A reason is required for all balance adjustments.'); return; }
+  try {
+    const bals = await spGetItems(CONFIG.lists.leaveBalances,
+      `$filter=fields/EmployeeID eq '${empId}' and fields/LeaveType eq '${type}'`);
+    const b = bals[0];
+    if (!b) { alert('Balance record not found.'); return; }
+    const newAdj     = (b.LeaveAdjusted||0) + adj;
+    const newClosing = (b.OpeningBalance||0)+(b.LeaveAccrued||0)-(b.LeaveTaken||0)+newAdj;
+    await spPatch(CONFIG.lists.leaveBalances, b.id, {
+      LeaveAdjusted:   newAdj,
+      ClosingBalance:  newClosing,
+      HRComment:       reason,
+      LastUpdatedDate: new Date().toISOString(),
+      LastUpdatedBy:   currentUser.EmployeeEmail
+    });
+    // Email the employee
+    const emps = await spGetItems(CONFIG.lists.employees,
+      `$filter=fields/EmployeeEmail eq '${empId}'`);
+    const emp = emps[0];
+    if (emp?.EmployeeEmail) {
+      await sendEmail(emp.EmployeeEmail,
+        `Your ${type} balance has been adjusted`,
+        `<p>Hi ${emp.FirstName||emp.EmployeeName},</p>
+         <p>Your <strong>${type}</strong> leave balance has been adjusted by HR.</p>
+         <ul><li><strong>Adjustment:</strong> ${adj >= 0 ? '+' : ''}${adj} days</li>
+         <li><strong>New available balance:</strong> ${newClosing} days</li>
+         <li><strong>Reason:</strong> ${reason}</li></ul>
+         <p style="color:#7F8C8D;font-size:12px">Transmutex Leave Management App</p>`
+      ).catch(() => {});
+    }
+    closeModal('modal-balance');
+    showToast('Balance adjusted successfully.');
+    loadEmployeeBalances();
+  } catch(e) { showToast(`Error: ${e.message}`, 'error'); }
+}
+
+async function loadUsers() {
+  const tbody  = document.getElementById('users-body');
+  const search = (document.getElementById('hr-user-search')?.value || '').toLowerCase();
+  try {
+    let items = await spGetItems(CONFIG.lists.employees);
+    if (search) items = items.filter(e =>
+      (e.EmployeeName||'').toLowerCase().includes(search) ||
+      (e.EmployeeEmail||'').toLowerCase().includes(search));
+    if (items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><p>No employees found.</p></td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(e => `<tr>
+      <td><strong>${e.EmployeeName||`${e.FirstName} ${e.LastName}`.trim()}</strong></td>
+      <td><span class="text-muted">${e.EmployeeEmail||'—'}</span></td>
+      <td>${e.Department||'—'}</td>
+      <td>${e.CountryOrRegion||'—'}</td>
+      <td>${e.Roles||'Employee'}</td>
+      <td>${e.IsActive ? '<span class="badge badge-approved">Active</span>' : '<span class="badge badge-cancelled">Inactive</span>'}</td>
+      <td>${e.IsActive
+        ? `<button class="btn btn-outline btn-sm" onclick="deactivateUser('${e.id}','${e.EmployeeName||e.EmployeeEmail}')">Deactivate</button>`
+        : `<button class="btn btn-outline btn-sm" onclick="reactivateUser('${e.id}')">Reactivate</button>`}</td>
+    </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="alert alert-error">${e.message}</div></td></tr>`;
+  }
+}
+
+async function deactivateUser(itemId, name) {
+  if (!confirm(`Deactivate ${name}? Their pending requests will be cancelled.`)) return;
+  try {
+    await spPatch(CONFIG.lists.employees, itemId, { IsActive: false, EndDate: new Date().toISOString() });
+    showToast(`${name} deactivated.`);
+    loadUsers();
+  } catch(e) { showToast(`Error: ${e.message}`, 'error'); }
+}
+
+async function reactivateUser(itemId) {
+  try {
+    await spPatch(CONFIG.lists.employees, itemId, { IsActive: true });
+    showToast('User reactivated.');
+    loadUsers();
+  } catch(e) { showToast(`Error: ${e.message}`, 'error'); }
+}
+
+function openAddUserModal() {
+  showToast('To add a new employee, please add them directly in the SharePoint Employees list, then reload the app.', 'info');
+}
+
+async function loadLeaveTypes() {
+  const tbody = document.getElementById('leavetypes-body');
+  try {
+    const items = await spGetItems(CONFIG.lists.leaveTypes);
+    tbody.innerHTML = items.map(t => `<tr>
+      <td><strong>${t.LeaveName||'—'}</strong></td>
+      <td>${t.Country||'—'}</td>
+      <td>${t.MaxDaysPerYear||'—'}</td>
+      <td>${t.RequiresApproval ? '✓ Yes' : 'No'}</td>
+      <td>${t.IsPaidPct !== undefined ? t.IsPaidPct + '%' : '—'}</td>
+      <td>${t.CalendarEventType||'—'}</td>
+    </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="alert alert-error">${e.message}</div></td></tr>`;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TOAST NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:24px;right:24px;padding:14px 20px;border-radius:10px;
+    color:#fff;font-size:14px;font-weight:500;z-index:9999;max-width:360px;box-shadow:0 4px 16px rgba(0,0,0,0.2);
+    background:${type==='error'?'#E74C3C':type==='info'?'#2E86AB':'#27AE60'};
+    animation:slideIn 0.2s ease;`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// START
+// ─────────────────────────────────────────────────────────────────────────────
+init().catch(e => showAccessDenied('Initialisation error: ' + e.message));
+</script>
+</body>
+</html>
