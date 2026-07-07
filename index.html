@@ -443,10 +443,7 @@ async function getToken() {
 async function init() {
   await msalInstance.initialize();
 
-  // Detect if we're running inside Microsoft Teams
-  const inTeams = await detectTeams();
-
-  // Step 1: If we are returning from a Microsoft redirect login, capture the result
+  // Step 1: If returning from a Microsoft redirect login, capture the result
   let redirectResult = null;
   try {
     redirectResult = await msalInstance.handleRedirectPromise();
@@ -458,7 +455,7 @@ async function init() {
     msalAccount = redirectResult.account;
   }
 
-  // Step 2: Check if there is already a signed-in account in the cache
+  // Step 2: Check for already signed-in account in cache
   if (!msalAccount) {
     const accounts = msalInstance.getAllAccounts();
     if (accounts.length > 0) msalAccount = accounts[0];
@@ -467,13 +464,13 @@ async function init() {
   // Step 3: If still not signed in, trigger login
   if (!msalAccount) {
     try {
+      // Detect if running inside Microsoft Teams
+      const inTeams = await detectTeams();
       if (inTeams) {
-        // Inside Teams, use the Teams SDK's own auth popup — this is the
-        // Microsoft-supported way to sign in from inside a Teams tab.
         await loginViaTeams();
         return;
       } else {
-        // Outside Teams (plain browser), use standard MSAL redirect.
+        // Use redirect — works in browsers and doesn't rely on popups
         await msalInstance.loginRedirect({ scopes: SCOPES });
         return;
       }
@@ -487,36 +484,27 @@ async function init() {
   await loadCurrentUser();
 }
 
-// Checks whether the app is running inside Microsoft Teams.
-// Returns true/false; also calls microsoftTeams.app.initialize() if so.
+// Detects whether the app is running inside Microsoft Teams
 function detectTeams() {
   return new Promise((resolve) => {
-    if (typeof microsoftTeams === 'undefined') {
-      resolve(false);
-      return;
-    }
-    // Give the Teams SDK a brief moment to detect its host context.
+    if (typeof microsoftTeams === 'undefined') { resolve(false); return; }
     const timeout = setTimeout(() => resolve(false), 1000);
     microsoftTeams.app.initialize().then(() => {
-      clearTimeout(timeout);
-      resolve(true);
+      clearTimeout(timeout); resolve(true);
     }).catch(() => {
-      clearTimeout(timeout);
-      resolve(false);
+      clearTimeout(timeout); resolve(false);
     });
   });
 }
 
-// Signs in using Teams' own authentication popup (auth-start/auth-end pages),
-// which is the supported pattern for tabs running inside the Teams app shell.
+// Signs in using Teams' own authentication popup (supported pattern for Teams tabs)
 function loginViaTeams() {
   return new Promise((resolve, reject) => {
     microsoftTeams.authentication.authenticate({
       url: window.location.origin + '/auth-start.html',
       width: 600,
       height: 535
-    }).then((result) => {
-      // auth-end.html will have stored the account; re-check MSAL cache
+    }).then(() => {
       const accounts = msalInstance.getAllAccounts();
       if (accounts.length > 0) {
         msalAccount = accounts[0];
